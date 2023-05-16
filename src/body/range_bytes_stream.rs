@@ -4,6 +4,7 @@ use std::task::{Context, Poll};
 use std::io::{Result, SeekFrom};
 use futures_util::Stream;
 use hyper::body::Bytes;
+use tokio::io::AsyncSeek;
 
 use crate::range::HttpRange;
 
@@ -39,7 +40,7 @@ impl Stream for RangeBytesStream {
             *state = RangeState::Reading;
         }
         if let RangeState::Seeking = *state {
-            match Pin::new(stream).poll_complete(cx) {
+            match Pin::new(&mut stream.reader).poll_complete(cx) {
                 Poll::Ready(Ok(_)) => {
                     *state = RangeState::Reading;
                 },
