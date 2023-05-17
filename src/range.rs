@@ -21,18 +21,25 @@ impl HttpRange {
         if !header.starts_with(HEADER_PREFIX) {
             return Err(ParseError::InvalidRange);
         }
+        let mut no_overlap = false;
         let ranges = header[HEADER_PREFIX.len()..]
             .split(|n| *n == b',')
             .filter_map(|srange|  -> Option<Result<HttpRange>> {
                 let srange = srange.trim();
                 match Self::parse_single_range(srange, file_size) {
                     Ok(Some(o)) => Some(Ok(o)),
+                    Ok(None) => {
+                        no_overlap = true;
+                        None
+                    },
                     Err(e) => Some(Err(e)),
-                    _ => None,
                 }
             })
-            .collect::<Result<Vec<HttpRange>>>();
-        ranges
+            .collect::<Result<Vec<HttpRange>>>()?;
+        if no_overlap && ranges.len() == 0 {
+            return Err(ParseError::NoOverlap);
+        }
+        Ok(ranges)
     } 
 
     fn parse_single_range(range: &[u8], file_size: u64) -> Result<Option<HttpRange>> {

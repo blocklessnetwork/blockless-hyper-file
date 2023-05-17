@@ -7,7 +7,7 @@ use crate::file::{TokioFileReader, FileReader};
 
 pub struct FileBytesStream<T = TokioFileReader> {
     pub reader: T,
-    remaining: u64,
+    pub(crate) remaining: u64,
 }
 
 impl<T>  FileBytesStream<T>  {
@@ -36,6 +36,7 @@ impl<T: FileReader> Stream for FileBytesStream<T> {
         } = *self;
         match Pin::new(reader).poll_read(cx, *remaining) {
             Poll::Ready(Ok(b)) => {
+                *remaining -= b.len() as u64;
                 if b.is_empty() {
                     Poll::Ready(None)
                 } else {
