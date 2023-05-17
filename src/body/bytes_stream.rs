@@ -6,7 +6,7 @@ use crate::file::{TokioFileReader, FileReader};
 
 
 pub struct FileBytesStream<T = TokioFileReader> {
-    pub(crate) reader: T,
+    pub reader: T,
     remaining: u64,
 }
 

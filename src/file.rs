@@ -40,7 +40,7 @@ trait FileReaderOpener: Send + Sync + 'static {
 
 /// The file reader which read the bytes from file to fill the body.
 /// Using th tokio file in tokio async runtime.
-pub(crate) struct TokioFileReader {
+pub struct TokioFileReader {
     file: tokio::fs::File,
     buf: Box<[MaybeUninit<u8>; READ_BUF_SIZE]>,
 }

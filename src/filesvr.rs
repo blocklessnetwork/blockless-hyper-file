@@ -42,7 +42,7 @@ where
     type Future = FileRespone;
 
     fn call(&mut self, req: Request<B>) -> Self::Future {
-        
+        todo!()
     }
 
     fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -50,7 +50,7 @@ where
     }
 }
 
-pub(crate) struct FileRespone {
+pub struct FileRespone {
     body: Response<Body>
 }
 
@@ -58,6 +58,6 @@ impl Future for FileRespone {
     type Output = Result<Response<Body>, IoError>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        Poll::Ready(Ok(self.body))
+        todo!()
     }
 }
