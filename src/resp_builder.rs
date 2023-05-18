@@ -1,6 +1,6 @@
 use std::time::SystemTime;
 
-use hyper::{header, HeaderMap, http, Response};
+use hyper::{header, HeaderMap, http, Response, Request};
 use httpdate;
 
 use crate::body::Body;
@@ -22,6 +22,11 @@ impl ResponseBuilder {
         self
     }
 
+    pub fn request<B>(&mut self, req: &Request<B>) -> &mut Self {
+        self.request_headers(req.headers());
+        self
+    }
+
     pub fn request_headers(&mut self, headers: &HeaderMap) -> &mut Self {
         self.range_header(headers.get(header::RANGE));
         self.if_modified_since_header(headers.get(header::IF_MODIFIED_SINCE));
@@ -36,6 +41,6 @@ impl ResponseBuilder {
     }
 
     pub fn build() -> http::Result<Response<Body>> {
-        todo!()
+        
     }
 }

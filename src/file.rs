@@ -6,7 +6,7 @@ use std::{
     task::{Context, Poll}, 
     mem::MaybeUninit, 
     io::SeekFrom,
-    cmp::min, fs::OpenOptions
+    cmp::min, fs::{OpenOptions, Permissions}, time::SystemTime
 };
 
 use hyper::body::Bytes;
@@ -20,9 +20,11 @@ const READ_BUF_SIZE: usize = 10240;
 
 /// file with the meta use for body stream.
 pub struct FileWithMeta {
-    pub file: File,
     pub size: u64,
+    pub file: File,
     pub is_dir: bool,
+    pub modified: SystemTime,
+    pub permisions: Permissions,
 }
 
 /// The file reader which read the bytes from file to fill the body.
@@ -30,10 +32,10 @@ pub trait FileReader: AsyncSeek + Unpin + Send + 'static {
     fn poll_read(self: Pin<&mut Self>, cx: &mut Context<'_>, readn: u64) -> Poll<Result<Bytes>>;
 }
 
-trait FileReaderOpener: Send + Sync + 'static {
+pub trait FileReaderOpener: Send + Sync + 'static {
     type Output: Into<FileWithMeta>;
 
-    type Future: Future<Output = Result<Self::Output>>;
+    type Future: Future<Output = Result<Self::Output>> + Unpin;
 
     fn open<T: AsRef<Path>>(&self, path: T) -> Self::Future;
 }
@@ -108,6 +110,8 @@ impl FileWithMetaFuture {
                 file,
                 size: meta.len(),
                 is_dir: meta.is_dir(),
+                modified: meta.modified()?,
+                permisions: meta.permissions(),
             })
         });
         Self { inner }
@@ -131,8 +135,8 @@ impl Future for FileWithMetaFuture {
     }
 }
 
-struct TokioFileReaderOpener {
-    root: PathBuf,
+pub struct TokioFileReaderOpener {
+    pub root: PathBuf,
 }
 
 impl FileReaderOpener for TokioFileReaderOpener {
