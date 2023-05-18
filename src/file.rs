@@ -94,7 +94,7 @@ impl AsyncSeek for TokioFileReader {
 
 
 /// The future get the file and meta info 
-struct FileWithMetaFuture {
+pub struct FileWithMetaFuture {
     inner: JoinHandle<Result<FileWithMeta>>
 }
 

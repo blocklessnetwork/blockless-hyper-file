@@ -17,18 +17,23 @@ pub enum Resolved {
     Found,
 }
 
-struct RequestResolve<O = TokioFileReaderOpener> {
-    opener: O,
+struct RequestResolve {
+    opener: TokioFileReaderOpener,
 }
 
-impl<O: FileReaderOpener<Output = FileWithMeta>> RequestResolve<O> {
-    fn new_with_opener(o: O) -> Self {
+impl RequestResolve {
+    fn new(path: impl Into<PathBuf>) -> Self {
+        let opener = TokioFileReaderOpener {root: path.into()};
+        Self::new_with_opener(opener)
+    }
+
+    fn new_with_opener(o: TokioFileReaderOpener) -> Self {
         Self {
             opener: o
         }
     }
 
-    pub fn resolve<B>(&mut self, request: &Request<B>) -> ResolveFuture<B, &mut RequestResolve<O>> {
+    pub fn resolve<'a, 'b, B>(&'a mut self, request: &'b Request<B>) -> ResolveFuture<'a, 'b, B> {
         ResolveFuture {
             inner: self,
             request,
@@ -36,32 +41,26 @@ impl<O: FileReaderOpener<Output = FileWithMeta>> RequestResolve<O> {
     }
 }
 
-impl RequestResolve<TokioFileReaderOpener> {
-    fn new(path: impl Into<PathBuf>) -> Self {
-        let opener = TokioFileReaderOpener {root: path.into()};
-        Self::new_with_opener(opener)
-    }
+
+struct ResolveFuture<'a, 'b, B> {
+    inner: &'a mut RequestResolve,
+    request:&'b Request<B>
 }
 
-struct ResolveFuture<'a, B, T = RequestResolve> {
-    inner: T,
-    request:&'a Request<B>
-}
-
-impl<'a, B, T: FileReaderOpener<Output = FileWithMeta>> Future for ResolveFuture<'a, B, T> {
+impl<'a, 'b, B> Future for ResolveFuture<'a, 'b, B> {
     type Output = Result<Resolved>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let Self {
             inner: ref mut req_resolve,
-            request,
+            ref mut request,
         } = *self;
         match *request.method() {
             Method::GET| Method::HEAD => {},
             _ => return Poll::Ready(Ok(Resolved::MethodNotMatched)),
         }
         let path = request.uri().path();
-        let mut fut = req_resolve.open(path);
+        let mut fut = req_resolve.opener.open(path);
         let file_with_meta = match Pin::new(&mut fut).poll(cx) {
             Poll::Ready(Ok(r)) => r,
             Poll::Ready(Err(e)) =>  {
