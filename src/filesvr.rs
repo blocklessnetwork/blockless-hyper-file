@@ -24,8 +24,7 @@ impl FileSvr {
   
     async fn serv<B>(self, req: Request<B>) -> Result<Response<Body>, IoError> {
         let path = req.uri().path();
-        
-        Ok(Response::new(Body{}))
+        todo!()
     }
 }
 

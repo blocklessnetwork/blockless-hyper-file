@@ -65,7 +65,7 @@ impl Stream for RangeBytesStream {
     }
 }
 
-struct MultiRangeBytesStream {
+pub struct MultiRangeBytesStream {
     ranges: vec::IntoIter<HttpRange>,
     range_stream: RangeBytesStream,
     is_first_boundary: bool,
