@@ -1,12 +1,19 @@
-use std::{io::Error as IoError, future::Future, pin::Pin, task::{Poll, Context}};
+use std::{
+    io::{Error, Result},
+    future::Future, 
+    pin::Pin, 
+    task::{Poll, Context}
+};
 
 use hyper::{
     service::Service, 
     Request, 
-    Response
+    Response, StatusCode, Body
 };
 
-use crate::body::Body;
+use crate::{
+    request_resolve::{RequestResolve, Resolved}
+};
 
 pub struct FileSvr {
     local_root: String
@@ -22,9 +29,27 @@ impl Clone for FileSvr {
 
 impl FileSvr {
   
-    async fn serv<B>(self, req: Request<B>) -> Result<Response<Body>, IoError> {
-        let path = req.uri().path();
-        todo!()
+    async fn serv<B>(self, req: Request<B>) -> Result<Response<Body>> {
+        let resolved = RequestResolve::new(&self.local_root, &req).await?;
+        let resp = match resolved {
+            Resolved::IsDirectory => Response::builder()
+                    .status(StatusCode::FORBIDDEN)
+                    .body(Body::empty()),
+            Resolved::MethodNotMatched => Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(Body::empty()),
+            Resolved::NotFound => Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::empty()),
+            Resolved::PermissionDenied => Response::builder()
+                .status(StatusCode::FORBIDDEN)
+                .body(Body::empty()),
+            Resolved::Found(f) => {
+                println!("{}", f.size);
+                todo!()
+            },
+        }.unwrap();
+        Ok(resp)
     }
 }
 
@@ -36,7 +61,7 @@ where
 {
     type Response = Response<Body>;
 
-    type Error = IoError;
+    type Error = Error;
 
     type Future = FileRespone;
 
@@ -44,7 +69,7 @@ where
         todo!()
     }
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<()>> {
         Poll::Ready(Ok(()))
     }
 }
@@ -54,7 +79,7 @@ pub struct FileRespone {
 }
 
 impl Future for FileRespone {
-    type Output = Result<Response<Body>, IoError>;
+    type Output = Result<Response<Body>>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         todo!()

@@ -35,7 +35,7 @@ pub trait FileReader: AsyncSeek + Unpin + Send + 'static {
 pub trait FileReaderOpener: Send + Sync + 'static {
     type Output: Into<FileWithMeta>;
 
-    type Future: Future<Output = Result<Self::Output>> + Unpin;
+    type Future: Future<Output = Result<Self::Output>> + Unpin + 'static;
 
     fn open<T: AsRef<Path>>(&self, path: T) -> Self::Future;
 }

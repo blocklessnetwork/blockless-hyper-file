@@ -14,58 +14,46 @@ pub enum Resolved {
     NotFound,
     PermissionDenied,
     IsDirectory,
-    Found,
+    Found(FileWithMeta),
 }
 
-struct RequestResolve {
-    opener: TokioFileReaderOpener,
+pub(crate) struct RequestResolve<'a, B, T = TokioFileReaderOpener> {
+    opener: T,
+    request: &'a Request<B>,
 }
 
-impl RequestResolve {
-    fn new(path: impl Into<PathBuf>) -> Self {
+impl<'a, B, T: FileReaderOpener> RequestResolve<'a, B, T> {
+    fn new_with_opener(t: T, r: &'a Request<B>) -> Self {
+        Self { opener: t, request: r }
+    }
+}
+
+impl<'a, B> RequestResolve<'a, B, TokioFileReaderOpener> {
+    pub fn new(path: impl Into<PathBuf>, r: &'a Request<B>) -> Self {
         let opener = TokioFileReaderOpener {root: path.into()};
-        Self::new_with_opener(opener)
-    }
-
-    fn new_with_opener(o: TokioFileReaderOpener) -> Self {
-        Self {
-            opener: o
-        }
-    }
-
-    pub fn resolve<'a, 'b, B>(&'a mut self, request: &'b Request<B>) -> ResolveFuture<'a, 'b, B> {
-        ResolveFuture {
-            inner: self,
-            request,
-        }
+        Self::new_with_opener(opener, r)
     }
 }
 
-
-struct ResolveFuture<'a, 'b, B> {
-    inner: &'a mut RequestResolve,
-    request:&'b Request<B>
-}
-
-impl<'a, 'b, B> Future for ResolveFuture<'a, 'b, B> {
+impl<'a, B, T: FileReaderOpener<Output = FileWithMeta>> Future for RequestResolve<'a, B, T> {
     type Output = Result<Resolved>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let Self {
-            inner: ref mut req_resolve,
-            ref mut request,
+            ref opener,
+            ref request,
         } = *self;
         match *request.method() {
             Method::GET| Method::HEAD => {},
             _ => return Poll::Ready(Ok(Resolved::MethodNotMatched)),
         }
         let path = request.uri().path();
-        let mut fut = req_resolve.opener.open(path);
+        let mut fut = opener.open(path);
         let file_with_meta = match Pin::new(&mut fut).poll(cx) {
             Poll::Ready(Ok(r)) => r,
             Poll::Ready(Err(e)) =>  {
                 let rs = match e.kind() {
-                    ErrorKind::NotFound => Ok(Resolved::MethodNotMatched),
+                    ErrorKind::NotFound => Ok(Resolved::NotFound),
                     ErrorKind::PermissionDenied => Ok(Resolved::PermissionDenied),
                     e @ _ => Err(e.into()),
                 };
@@ -76,6 +64,6 @@ impl<'a, 'b, B> Future for ResolveFuture<'a, 'b, B> {
         if file_with_meta.is_dir {
             return Poll::Ready(Ok(Resolved::IsDirectory));
         }
-        return Poll::Ready(Ok(Resolved::Found));
+        return Poll::Ready(Ok(Resolved::Found(file_with_meta)));
     }
 }
