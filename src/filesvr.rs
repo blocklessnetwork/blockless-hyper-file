@@ -8,11 +8,16 @@ use std::{
 use hyper::{
     service::Service, 
     Request, 
-    Response, StatusCode, Body
+    Response, StatusCode
 };
 
 use crate::{
-    request_resolve::{RequestResolve, Resolved}
+    request_resolve::{
+        RequestResolve, 
+        Resolved
+    }, 
+    resp_builder::ResponseBuilder, 
+    body::Body
 };
 
 pub struct FileSvr {
@@ -34,19 +39,18 @@ impl FileSvr {
         let resp = match resolved {
             Resolved::IsDirectory => Response::builder()
                     .status(StatusCode::FORBIDDEN)
-                    .body(Body::empty()),
+                    .body(Body::Empty),
             Resolved::MethodNotMatched => Response::builder()
                 .status(StatusCode::BAD_REQUEST)
-                .body(Body::empty()),
+                .body(Body::Empty),
             Resolved::NotFound => Response::builder()
                 .status(StatusCode::NOT_FOUND)
-                .body(Body::empty()),
+                .body(Body::Empty),
             Resolved::PermissionDenied => Response::builder()
                 .status(StatusCode::FORBIDDEN)
-                .body(Body::empty()),
+                .body(Body::Empty),
             Resolved::Found(f) => {
-                println!("{}", f.size);
-                todo!()
+                ResponseBuilder::new().build(f)
             },
         }.unwrap();
         Ok(resp)

@@ -38,6 +38,10 @@ pub struct ResponseBuilder {
 
 impl ResponseBuilder {
 
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     pub fn range_header(&mut self, value: Option<&header::HeaderValue>) -> &mut Self {
         self.range = value
             .and_then(|v| v.to_str().ok())
