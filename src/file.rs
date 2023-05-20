@@ -23,7 +23,7 @@ pub struct FileWithMeta {
     pub size: u64,
     pub file: File,
     pub is_dir: bool,
-    pub modified: SystemTime,
+    pub modified: Option<SystemTime>,
     pub permisions: Permissions,
 }
 
@@ -92,6 +92,11 @@ impl AsyncSeek for TokioFileReader {
     }
 }
 
+impl Into<TokioFileReader> for FileWithMeta {
+    fn into(self) -> TokioFileReader {
+        TokioFileReader::new(self.file)
+    }
+}
 
 /// The future get the file and meta info 
 pub struct FileWithMetaFuture {
@@ -110,7 +115,7 @@ impl FileWithMetaFuture {
                 file,
                 size: meta.len(),
                 is_dir: meta.is_dir(),
-                modified: meta.modified()?,
+                modified: meta.modified().ok(),
                 permisions: meta.permissions(),
             })
         });

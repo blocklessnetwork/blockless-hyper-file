@@ -1,5 +1,5 @@
 use hyper::body::Bytes;
-use range_bytes_stream::MultiRangeBytesStream;
+
 use std::{
     io::Error, 
     task::{Poll, Context}, 
@@ -7,11 +7,17 @@ use std::{
 };
 use futures_util::Stream;
 
+pub use range_bytes_stream::MultiRangeBytesStream;
+pub use self::range_bytes_stream::RangeBytesStream;
+
 mod bytes_stream;
 mod range_bytes_stream;
 mod chunked_bytes_stream;
 
+
 pub enum Body {
+    Empty,
+    RangeBytesStream(RangeBytesStream),
     MultiRangeBytesStream(MultiRangeBytesStream)
 }
 
@@ -25,7 +31,9 @@ impl hyper::body::HttpBody for Body {
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<Self::Data, Self::Error>>> {
         match *self {
-            Body::MultiRangeBytesStream(ref mut r) => Pin::new(r).poll_next(cx),
+            Body::MultiRangeBytesStream(ref mut mr) => Pin::new(mr).poll_next(cx),
+            Body::RangeBytesStream(ref mut r) => Pin::new(r).poll_next(cx),
+            Body::Empty => Poll::Ready(None),
         }
     }
 

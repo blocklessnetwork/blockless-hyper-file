@@ -20,14 +20,25 @@ enum RangeState {
     Reading,
 }
 
-struct RangeBytesStream {
+pub struct RangeBytesStream {
     state: RangeState,
     start_pos: u64,
     stream: FileBytesStream,
 }
 
 impl RangeBytesStream {
-    fn new(reader: TokioFileReader) -> RangeBytesStream {
+    pub fn new_with_range(
+        reader: TokioFileReader, 
+        range: &HttpRange, 
+        file_size: u64
+    ) -> RangeBytesStream {
+        Self {
+            stream: FileBytesStream::new_with_limited(reader, range.length),
+            start_pos: range.start,
+            state: RangeState::Inital,
+        }
+    }
+    pub fn new(reader: TokioFileReader) -> RangeBytesStream {
         RangeBytesStream {
             stream: FileBytesStream::new_with_limited(reader, 0),
             state: RangeState::Inital,
@@ -76,7 +87,7 @@ pub struct MultiRangeBytesStream {
 }
 
 impl MultiRangeBytesStream {
-    fn new(
+    pub fn new(
         reader: TokioFileReader,
         ranges: Vec<HttpRange>,
         boundary: String,
