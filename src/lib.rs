@@ -3,7 +3,7 @@ mod error;
 mod body;
 mod file;
 mod range;
-mod request_resolve;
 mod resp_builder;
+mod request_resolve;
 
 pub use filesvr::FileSvr;

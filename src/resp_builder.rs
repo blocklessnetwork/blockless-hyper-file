@@ -51,6 +51,7 @@ impl ResponseBuilder {
 
     pub fn request<B>(&mut self, req: &Request<B>) -> &mut Self {
         self.request_headers(req.headers());
+        self.is_head_method(req.method());
         self
     }
 
@@ -61,21 +62,21 @@ impl ResponseBuilder {
         self
     }
     
-    pub fn if_modified_since_header(&mut self, value: Option<&header::HeaderValue>) -> &mut Self {
+    fn if_modified_since_header(&mut self, value: Option<&header::HeaderValue>) -> &mut Self {
         self.if_modified_since = value
             .and_then(|v| v.to_str().ok())
             .and_then(|v| httpdate::parse_http_date(v).ok());
         self
     }
 
-    pub fn if_range_header(&mut self, value: Option<&header::HeaderValue>) -> &mut Self {
+    fn if_range_header(&mut self, value: Option<&header::HeaderValue>) -> &mut Self {
         self.if_range = value
             .and_then(|v| v.to_str().ok())
             .map(String::from);
         self
     }
 
-    pub fn is_head_method(&mut self, method: &Method) -> &mut Self {
+    fn is_head_method(&mut self, method: &Method) -> &mut Self {
         self.is_head_method = if method == Method::HEAD {
             true
         } else {

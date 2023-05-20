@@ -83,7 +83,7 @@ impl FileReader for TokioFileReader {
 }
 
 impl AsyncSeek for TokioFileReader {
-    fn start_seek(mut self: Pin<&mut Self>, position: SeekFrom) -> Result<()> {
+    fn start_seek(self: Pin<&mut Self>, position: SeekFrom) -> Result<()> {
         Pin::new(&mut self.get_mut().file).start_seek(position)
     }
 

@@ -1,5 +1,5 @@
 use std::{
-    io::{Error, Result},
+    io::{Error, Result, ErrorKind},
     pin::Pin, 
     task::{Poll, Context}
 };
@@ -96,7 +96,14 @@ impl<B> Future for ResponseFuture<B> {
                 .status(StatusCode::FORBIDDEN)
                 .body(Body::Empty),
             Resolved::Found(f) => ResponseBuilder::new().build(f),
-        }.unwrap();
+        };
+        let resp = match resp {
+            Ok(resp) => resp,
+            Err(e) => {
+                let e = Error::new(ErrorKind::Other, e);
+                return Poll::Ready(Err(e));
+            },
+        };
         Poll::Ready(Ok(resp))
     }
 }
