@@ -6,4 +6,4 @@ mod range;
 mod request_resolve;
 mod resp_builder;
 
-pub use filesvr::*;
+pub use filesvr::FileSvr;

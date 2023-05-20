@@ -30,7 +30,7 @@ impl<'a, B, T: FileReaderOpener> RequestResolve<'a, B, T> {
 
 impl<'a, B> RequestResolve<'a, B, TokioFileReaderOpener> {
     pub fn new(path: impl Into<PathBuf>, r: &'a Request<B>) -> Self {
-        let opener = TokioFileReaderOpener {root: path.into()};
+        let opener = TokioFileReaderOpener::new(path);
         Self::new_with_opener(opener, r)
     }
 }

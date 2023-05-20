@@ -141,7 +141,15 @@ impl Future for FileWithMetaFuture {
 }
 
 pub struct TokioFileReaderOpener {
-    pub root: PathBuf,
+    root: PathBuf,
+}
+
+impl TokioFileReaderOpener {
+    pub fn new(root: impl Into<PathBuf>) -> Self {
+        Self {
+            root: root.into()
+        }
+    }
 }
 
 impl FileReaderOpener for TokioFileReaderOpener {
