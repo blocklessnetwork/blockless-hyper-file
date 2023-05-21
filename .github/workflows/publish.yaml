@@ -1,9 +1,7 @@
-name: Publish to Cargo
-
 on:
   push:
     branches: [ master ]
-
+name: Cargo publish
 jobs:
   publish:
     runs-on: ubuntu-latest
