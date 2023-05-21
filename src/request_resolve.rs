@@ -1,7 +1,5 @@
-use std::task::{Context, Poll};
-use std::{path::PathBuf, pin::Pin};
+use std::path::PathBuf;
 use std::io::{Result, ErrorKind};
-use std::future::Future;
 use hyper::{Request, Method};
 
 use crate::file::{
