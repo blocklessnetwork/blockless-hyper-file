@@ -34,37 +34,10 @@ pub struct FileService {
 
 impl FileService {
     pub fn new(root: impl Into<String>) -> Self {
+        let local_root = root.into();
         Self {
-            local_root: root.into()
+            local_root
         }
-    }
-
-    pub async fn serv<B>(self, request: Request<B>) -> Result<Response<Body>> {
-        let request_resolve = RequestResolve::new(&self.local_root, &request);
-        let resolved = request_resolve.await?;
-        let resp = match resolved {
-            Resolved::IsDirectory => Response::builder()
-                    .status(StatusCode::FORBIDDEN)
-                    .body(Body::Empty),
-            Resolved::MethodNotMatched => Response::builder()
-                .status(StatusCode::BAD_REQUEST)
-                .body(Body::Empty),
-            Resolved::NotFound => Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(Body::Empty),
-            Resolved::PermissionDenied => Response::builder()
-                .status(StatusCode::FORBIDDEN)
-                .body(Body::Empty),
-            Resolved::Found(f) => ResponseBuilder::new().build(f),
-        };
-        let resp = match resp {
-            Ok(resp) => resp,
-            Err(e) => {
-                let e = Error::new(ErrorKind::Other, e);
-                return Err(e);
-            },
-        };
-        Ok(resp)
     }
 }
 
@@ -85,18 +58,21 @@ where
     fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<()>> {
         Poll::Ready(Ok(()))
     }
-
 }
 
 pub struct FileServiceFuture {
     req_resolve: RequestResolve,
-    
+    resp_builder: ResponseBuilder,
 }
 
 impl FileServiceFuture {
     fn new<B>(local_root: &str, request: Request<B>) -> Self {
+        let req_resolve = RequestResolve::resolve(local_root, &request);
+        let mut resp_builder = ResponseBuilder::new();
+        resp_builder.request(&request);
         Self {
-            req_resolve: RequestResolve::new(local_root, &request),
+            req_resolve,
+            resp_builder,
         }
     }
 }
@@ -105,8 +81,9 @@ impl Future for FileServiceFuture {
     type Output = Result<Response<Body>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let Self{
+        let Self {
             ref mut req_resolve,
+            ref resp_builder,
         } = *self;
         let resolved = match Pin::new(req_resolve).poll(cx) {
             Poll::Ready(Ok(r)) => r,
@@ -128,7 +105,9 @@ impl Future for FileServiceFuture {
             Resolved::PermissionDenied => Response::builder()
                 .status(StatusCode::FORBIDDEN)
                 .body(Body::Empty),
-            Resolved::Found(f) => ResponseBuilder::new().build(f),
+            Resolved::Found(f) => {
+                resp_builder.build(f)
+            },
         };
         let resp = match resp {
             Ok(resp) => resp,
@@ -148,8 +127,9 @@ pub struct FileServiceMaker {
 
 impl FileServiceMaker {
     pub fn new(local_root: impl Into<String>) -> Self {
+        let local_root = local_root.into();
         Self {
-            local_root: local_root.into()
+            local_root
         }
     }
 }

@@ -12,7 +12,7 @@ fn main() {
     let addr: SocketAddr = ([127, 0, 0, 1], 9088).into();
     rt.block_on(async move {
         let builder = Server::bind(&addr);
-        let server = builder.serve(FileServiceMaker::new("./"));
+        let server = builder.serve(FileServiceMaker::new("/Users/join/Downloads/hyper-file/"));
         server.await.unwrap();
     });
 }

@@ -132,7 +132,7 @@ impl ResponseBuilder {
                 resp_builder = resp_builder
                     .header(header::CONTENT_RANGE, content_range_header)
                     .header(header::CONTENT_LENGTH, file_size);
-                let stream = RangeBytesStream::new_with_range(file.into(), range, file_size);
+                let stream = RangeBytesStream::new_with_range(file.into(), range);
                 return resp_builder
                     .status(StatusCode::PARTIAL_CONTENT)
                     .body(Body::RangeBytesStream(stream));

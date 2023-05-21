@@ -10,10 +10,10 @@ use crate::file::{
 };
 #[derive(Debug)]
 pub enum Resolved {
-    MethodNotMatched,
     NotFound,
-    PermissionDenied,
     IsDirectory,
+    MethodNotMatched,
+    PermissionDenied,
     Found(FileWithMeta),
 }
 
@@ -23,7 +23,7 @@ pub(crate) struct RequestResolve {
 }
 
 impl RequestResolve {
-    pub fn new<B>(path: impl Into<PathBuf>, r: &Request<B>) -> Self {
+    pub fn resolve<B>(path: impl Into<PathBuf>, r: &Request<B>) -> Self {
         let opener = TokioFileReaderOpener::new(path);
         let opener_future = opener.open(r.uri().path());
         let is_method_match = match *r.method() {

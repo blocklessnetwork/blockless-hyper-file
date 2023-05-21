@@ -30,7 +30,6 @@ impl RangeBytesStream {
     pub fn new_with_range(
         reader: TokioFileReader, 
         range: &HttpRange, 
-        file_size: u64
     ) -> RangeBytesStream {
         Self {
             stream: FileBytesStream::new_with_limited(reader, range.length),
