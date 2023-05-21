@@ -14,7 +14,7 @@ use hyper::{
 use httpdate;
 
 use crate::{
-    body::{Body, RangeBytesStream, MultiRangeBytesStream}, 
+    body::{Body, RangeBytesStream, MultiRangeBytesStream, FileBytesStream}, 
 
     file::FileWithMeta, 
     
@@ -159,8 +159,13 @@ impl ResponseBuilder {
                 return resp_builder
                     .status(StatusCode::PARTIAL_CONTENT)
                     .body(Body::MultiRangeBytesStream(stream));
-            }
+            }   
         }
-        todo!()
+        resp_builder = resp_builder
+            .header(header::CONTENT_LENGTH, file_size);
+        let stream = FileBytesStream::new_with_limited(file.into(), file_size);
+        return resp_builder
+            .status(StatusCode::OK)
+            .body(Body::Full(stream));
     }
 }

@@ -8,7 +8,8 @@ use std::{
 use futures_util::Stream;
 
 pub use range_bytes_stream::MultiRangeBytesStream;
-pub use self::range_bytes_stream::RangeBytesStream;
+pub use bytes_stream::FileBytesStream;
+pub use range_bytes_stream::RangeBytesStream;
 
 mod bytes_stream;
 mod range_bytes_stream;
@@ -17,6 +18,7 @@ mod chunked_bytes_stream;
 
 pub enum Body {
     Empty,
+    Full(FileBytesStream),
     RangeBytesStream(RangeBytesStream),
     MultiRangeBytesStream(MultiRangeBytesStream)
 }
@@ -33,6 +35,7 @@ impl hyper::body::HttpBody for Body {
         match *self {
             Body::MultiRangeBytesStream(ref mut mr) => Pin::new(mr).poll_next(cx),
             Body::RangeBytesStream(ref mut r) => Pin::new(r).poll_next(cx),
+            Body::Full(ref mut r) => Pin::new(r).poll_next(cx),
             Body::Empty => Poll::Ready(None),
         }
     }

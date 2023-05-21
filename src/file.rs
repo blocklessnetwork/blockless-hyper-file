@@ -18,7 +18,7 @@ use tokio::{
     task::JoinHandle
 };
 
-const READ_BUF_SIZE: usize = 10240;
+const READ_BUF_SIZE: usize = 4*1024;
 
 /// file with the meta use for body stream.
 #[derive(Debug)]
