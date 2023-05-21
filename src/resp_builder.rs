@@ -119,6 +119,8 @@ impl ResponseBuilder {
                 }
             };
             let ranges_len = ranges.len();
+            
+            #[allow(clippy::comparison_chain)]
             if ranges_len == 1 {
                 let range = &ranges[0];
                 let content_range_header = Self::content_range_header(range, file.size);
