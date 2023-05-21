@@ -64,7 +64,7 @@ impl Stream for RangeBytesStream {
                 Poll::Ready(Ok(_)) => {
                     *state = RangeState::Reading;
                 }
-                Poll::Ready(Err(e)) => return Poll::Ready(Some(Err(e.into()))),
+                Poll::Ready(Err(e)) => return Poll::Ready(Some(Err(e))),
                 Poll::Pending => return Poll::Pending,
             };
         }
@@ -157,7 +157,7 @@ impl MultiRangeBytesStream {
 
     /// render the header of multi-part for end of body.
     fn render_header_end(boundary: &str) -> String {
-        format!("\r\n--{boundary}--\r\n").into()
+        format!("\r\n--{boundary}--\r\n")
     }
 }
 

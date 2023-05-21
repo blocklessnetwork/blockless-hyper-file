@@ -1,6 +1,5 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use httpdate;
 use hyper::{header, http::Result, HeaderMap, Method, Request, Response, StatusCode};
 
 use crate::{
@@ -38,7 +37,7 @@ impl ResponseBuilder {
             *iter = BOUNDARY_CHRS[idx];
             rnd += 1;
         }
-        (&mut boundary_buf[0..10]).copy_from_slice(b"blockless:");
+        boundary_buf[0..10].copy_from_slice(b"blockless:");
         String::from_utf8(boundary_buf).unwrap()
     }
 
@@ -73,7 +72,7 @@ impl ResponseBuilder {
     }
 
     fn is_head_method(&mut self, method: &Method) -> &mut Self {
-        self.is_head_method = if method == Method::HEAD { true } else { false };
+        self.is_head_method = method == Method::HEAD;
         self
     }
 
@@ -120,6 +119,8 @@ impl ResponseBuilder {
                 }
             };
             let ranges_len = ranges.len();
+            
+            #[allow(clippy::comparison_chain)]
             if ranges_len == 1 {
                 let range = &ranges[0];
                 let content_range_header = Self::content_range_header(range, file.size);
@@ -144,6 +145,6 @@ impl ResponseBuilder {
         }
         resp_builder = resp_builder.header(header::CONTENT_LENGTH, file_size);
         let stream = FileBytesStream::new_with_limited(file.into(), file_size);
-        return resp_builder.status(StatusCode::OK).body(Body::Full(stream));
+        resp_builder.status(StatusCode::OK).body(Body::Full(stream))
     }
 }
