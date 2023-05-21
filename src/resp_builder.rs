@@ -1,6 +1,5 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use httpdate;
 use hyper::{header, http::Result, HeaderMap, Method, Request, Response, StatusCode};
 
 use crate::{
@@ -38,7 +37,7 @@ impl ResponseBuilder {
             *iter = BOUNDARY_CHRS[idx];
             rnd += 1;
         }
-        (&mut boundary_buf[0..10]).copy_from_slice(b"blockless:");
+        boundary_buf[0..10].copy_from_slice(b"blockless:");
         String::from_utf8(boundary_buf).unwrap()
     }
 
@@ -144,6 +143,6 @@ impl ResponseBuilder {
         }
         resp_builder = resp_builder.header(header::CONTENT_LENGTH, file_size);
         let stream = FileBytesStream::new_with_limited(file.into(), file_size);
-        return resp_builder.status(StatusCode::OK).body(Body::Full(stream));
+        resp_builder.status(StatusCode::OK).body(Body::Full(stream))
     }
 }

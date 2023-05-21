@@ -1,6 +1,6 @@
 use crate::error::ParseError;
 
-const HEADER_PREFIX: &'static [u8] = b"bytes=";
+const HEADER_PREFIX: &[u8] = b"bytes=";
 
 #[derive(Debug, PartialEq)]
 pub struct HttpRange {
@@ -36,7 +36,7 @@ impl HttpRange {
                 }
             })
             .collect::<Result<Vec<HttpRange>>>()?;
-        if no_overlap && ranges.len() == 0 {
+        if no_overlap && ranges.is_empty() {
             return Err(ParseError::NoOverlap);
         }
         Ok(ranges)
@@ -57,10 +57,10 @@ impl HttpRange {
             if length > file_size {
                 length = file_size;
             }
-            return Ok(Some(HttpRange {
+            Ok(Some(HttpRange {
                 start: file_size - length,
                 length,
-            }));
+            }))
         } else {
             let start = range_start.to_u64().ok_or(ParseError::InvalidRange)?;
             if start > file_size {

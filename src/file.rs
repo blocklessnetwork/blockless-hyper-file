@@ -75,7 +75,7 @@ impl FileReader for TokioFileReader {
         match Pin::new(file).poll_read(cx, &mut buf) {
             Poll::Ready(Ok(())) => {
                 let bs = buf.filled();
-                if bs.len() == 0 {
+                if bs.is_empty() {
                     Poll::Ready(Ok(Bytes::new()))
                 } else {
                     let bs = Bytes::copy_from_slice(bs);
@@ -98,9 +98,9 @@ impl AsyncSeek for TokioFileReader {
     }
 }
 
-impl Into<TokioFileReader> for FileWithMeta {
-    fn into(self) -> TokioFileReader {
-        TokioFileReader::new(self.file)
+impl From<FileWithMeta> for TokioFileReader {
+    fn from(val: FileWithMeta) -> Self {
+        TokioFileReader::new(val.file)
     }
 }
 

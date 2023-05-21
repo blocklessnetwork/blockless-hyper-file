@@ -29,14 +29,11 @@ impl RequestResolve {
     pub fn resolve<B>(path: impl Into<PathBuf>, r: &Request<B>) -> Self {
         let opener = TokioFileReaderOpener::new(path);
         let mut uri_path = r.uri().path();
-        if uri_path.starts_with("/") {
+        if uri_path.starts_with('/') {
             uri_path = &uri_path[1..];
         }
         let opener_future = opener.open(decode_percents(uri_path));
-        let is_method_match = match *r.method() {
-            Method::GET | Method::HEAD => true,
-            _ => false,
-        };
+        let is_method_match = matches!(*r.method(), Method::GET | Method::HEAD);
         RequestResolve {
             opener_future,
             is_method_match,
@@ -61,7 +58,7 @@ impl Future for RequestResolve {
                 let rs = match e.kind() {
                     ErrorKind::NotFound => Ok(Resolved::NotFound),
                     ErrorKind::PermissionDenied => Ok(Resolved::PermissionDenied),
-                    e @ _ => Err(e.into()),
+                    _ => Err(e.into()),
                 };
 
                 return Poll::Ready(rs);
@@ -69,8 +66,9 @@ impl Future for RequestResolve {
             Poll::Pending => return Poll::Pending,
         };
         if file_with_meta.is_dir {
-            return Poll::Ready(Ok(Resolved::IsDirectory));
+            Poll::Ready(Ok(Resolved::IsDirectory))
+        } else {
+            Poll::Ready(Ok(Resolved::Found(file_with_meta)))
         }
-        return Poll::Ready(Ok(Resolved::Found(file_with_meta)));
     }
 }
