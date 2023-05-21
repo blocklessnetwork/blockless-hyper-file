@@ -8,7 +8,7 @@ use crate::file::{
     TokioFileReaderOpener, 
     FileReaderOpener, FileWithMeta
 };
-
+#[derive(Debug)]
 pub enum Resolved {
     MethodNotMatched,
     NotFound,
@@ -33,6 +33,33 @@ impl<'a, B> RequestResolve<'a, B, TokioFileReaderOpener> {
         let opener = TokioFileReaderOpener::new(path);
         Self::new_with_opener(opener, r)
     }
+
+    pub async fn resolve(&self) -> Result<Resolved> {
+        let Self {
+            ref opener,
+            ref request,
+        } = *self;
+        match *request.method() {
+            Method::GET| Method::HEAD => {},
+            _ => return Ok(Resolved::MethodNotMatched),
+        }
+        let path = request.uri().path();
+        let file_with_meta = match opener.open(path).await {
+            Ok(r) => r,
+            Err(e) =>  {
+                let rs = match e.kind() {
+                    ErrorKind::NotFound => Ok(Resolved::NotFound),
+                    ErrorKind::PermissionDenied => Ok(Resolved::PermissionDenied),
+                    e @ _ => Err(e.into()),
+                };
+                return rs;
+            },
+        };
+        if file_with_meta.is_dir {
+            return Ok(Resolved::IsDirectory);
+        }
+        return Ok(Resolved::Found(file_with_meta));
+    }
 }
 
 impl<'a, B, T: FileReaderOpener<Output = FileWithMeta>> Future for RequestResolve<'a, B, T> {
@@ -49,14 +76,17 @@ impl<'a, B, T: FileReaderOpener<Output = FileWithMeta>> Future for RequestResolv
         }
         let path = request.uri().path();
         let mut fut = opener.open(path);
-        let file_with_meta = match Pin::new(&mut fut).poll(cx) {
+        let p = Pin::new(&mut fut).poll(cx);
+        let file_with_meta = match  p {
             Poll::Ready(Ok(r)) => r,
             Poll::Ready(Err(e)) =>  {
                 let rs = match e.kind() {
+                    
                     ErrorKind::NotFound => Ok(Resolved::NotFound),
                     ErrorKind::PermissionDenied => Ok(Resolved::PermissionDenied),
                     e @ _ => Err(e.into()),
                 };
+                
                 return Poll::Ready(rs);
             },
             Poll::Pending => return Poll::Pending,

@@ -6,7 +6,9 @@ use std::{
     task::{Context, Poll}, 
     mem::MaybeUninit, 
     io::SeekFrom,
-    cmp::min, fs::{OpenOptions, Permissions}, time::SystemTime
+    cmp::min, 
+    fs::{OpenOptions, Permissions}, 
+    time::SystemTime
 };
 
 use hyper::body::Bytes;
@@ -19,6 +21,7 @@ use tokio::{
 const READ_BUF_SIZE: usize = 10240;
 
 /// file with the meta use for body stream.
+#[derive(Debug)]
 pub struct FileWithMeta {
     pub size: u64,
     pub file: File,
@@ -105,7 +108,7 @@ pub struct FileWithMetaFuture {
 
 impl FileWithMetaFuture {
     fn new(path: PathBuf) -> Self {
-        let inner = tokio::task::spawn_blocking(move || {
+        let inner = tokio::task::spawn_blocking(move || -> Result<FileWithMeta> {
             let file = OpenOptions::new()
                 .read(true)
                 .open(path)?;
@@ -129,7 +132,8 @@ impl Future for FileWithMetaFuture {
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         // the result is Result<Result<FileWithMeta>>
         // Poll::Ready(Ok(r)) => Poll::Ready(r) mean return the Poll::Ready(Ok) or Poll::Ready(Err), flatten
-        match Pin::new(&mut self.inner).poll(cx) {
+        let p = Pin::new(&mut self.inner).poll(cx);
+        match p {
             Poll::Ready(Ok(r)) => Poll::Ready(r),
             Poll::Ready(Err(_)) => {
                 //only Joinhandle error.
