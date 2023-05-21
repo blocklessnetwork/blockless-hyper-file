@@ -6,4 +6,4 @@ mod range;
 mod resp_builder;
 mod request_resolve;
 
-pub use filesvr::FileSvr;
+pub use filesvr::FileServiceMaker;

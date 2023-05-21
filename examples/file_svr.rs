@@ -1,8 +1,8 @@
-use std::{net::SocketAddr, convert::Infallible};
+use std::net::SocketAddr;
 
-use hyper_file::FileSvr;
+use hyper_file::FileServiceMaker;
 use tokio::runtime::Builder;
-use hyper::{Server, service::make_service_fn};
+use hyper::Server;
 
 fn main() {
     let rt = Builder::new_current_thread()
@@ -10,12 +10,9 @@ fn main() {
         .build()
         .unwrap();
     let addr: SocketAddr = ([127, 0, 0, 1], 9088).into();
-    let make_svc = make_service_fn(|_conn| {
-        async { Ok::<_, Infallible>(FileSvr::new("./")) }
-    });
     rt.block_on(async move {
         let builder = Server::bind(&addr);
-        let server = builder.serve(make_svc);
+        let server = builder.serve(FileServiceMaker::new("./"));
         server.await.unwrap();
     });
 }

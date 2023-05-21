@@ -1,7 +1,12 @@
 use std::{
-    io::{Error, Result, ErrorKind},
+    io::{
+        Error, 
+        Result, 
+        ErrorKind
+    },
     pin::Pin, 
-    task::{Poll, Context}
+    task::{Poll, Context},
+    result::Result as StdResult,
 };
 
 use hyper::{
@@ -19,23 +24,24 @@ use crate::{
         Resolved
     }, 
     resp_builder::ResponseBuilder, 
-    body::Body, file::{TokioFileReaderOpener, FileReaderOpener}
+    body::Body
 };
 
 #[derive(Clone)]
-pub struct FileSvr {
+pub struct FileService {
     local_root: String
 }
 
-impl FileSvr {
-    pub fn new(root: impl Into<String>) -> FileSvr {
+impl FileService {
+    pub fn new(root: impl Into<String>) -> Self {
         Self {
             local_root: root.into()
         }
     }
 
     pub async fn serv<B>(self, request: Request<B>) -> Result<Response<Body>> {
-        let resolved = RequestResolve::new(self.local_root.clone(), &request).resolve().await?;
+        let request_resolve = RequestResolve::new(&self.local_root, &request);
+        let resolved = request_resolve.resolve().await?;
         let resp = match resolved {
             Resolved::IsDirectory => Response::builder()
                     .status(StatusCode::FORBIDDEN)
@@ -62,7 +68,7 @@ impl FileSvr {
     }
 }
 
-impl<B> Service<Request<B>> for FileSvr 
+impl<B> Service<Request<B>> for FileService
 where
     B: Sync + Send + 'static
 {
@@ -70,10 +76,10 @@ where
 
     type Error = Error;
 
-    type Future = Pin<Box<dyn Future<Output = Result<Response<Body>>>+Send>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response>> + Send>>;
 
-    fn call(&mut self, req: Request<B>) -> Self::Future {
-        Box::pin(self.clone().serv(req))
+    fn call(&mut self, request: Request<B>) -> Self::Future {
+        Box::pin(self.clone().serv(request))
     }
 
     fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<()>> {
@@ -82,21 +88,21 @@ where
 
 }
 
-pub struct RequestFuture<B> {
+pub struct FileServiceFuture<B> {
     request: Request<B>,
     local_root: String,
 }
 
-impl<B> RequestFuture<B> {
+impl<B> FileServiceFuture<B> {
     fn new(local_root: String, request: Request<B>) -> Self {
-        Self { 
-            request, 
+        Self {
+            request,
             local_root 
         }
     }
 }
 
-impl<B> Future for RequestFuture<B> {
+impl<B> Future for FileServiceFuture<B> {
     type Output = Result<Response<Body>>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -135,5 +141,35 @@ impl<B> Future for RequestFuture<B> {
             },
         };
         Poll::Ready(Ok(resp))
+    }
+}
+
+#[derive(Clone)]
+pub struct FileServiceMaker {
+    local_root: String
+}
+
+impl FileServiceMaker {
+    pub fn new(local_root: impl Into<String>) -> Self {
+        Self {
+            local_root: local_root.into()
+        }
+    }
+}
+
+impl<T> Service<T> for FileServiceMaker {
+    type Response = FileService;
+
+    type Error = hyper::Error;
+
+    type Future =  Pin<Box<dyn Future<Output = StdResult<Self::Response, Self::Error>> + Send>>;
+
+    fn poll_ready(&mut self, _: &mut Context<'_>) -> Poll<StdResult<(), Self::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, _: T) -> Self::Future {
+        let local_root = self.local_root.clone();
+        Box::pin(async move { Ok(FileService::new(local_root)) })
     }
 }
