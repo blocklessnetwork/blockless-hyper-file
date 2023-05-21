@@ -27,10 +27,7 @@ pub struct RangeBytesStream {
 }
 
 impl RangeBytesStream {
-    pub fn new_with_range(
-        reader: TokioFileReader, 
-        range: &HttpRange, 
-    ) -> RangeBytesStream {
+    pub fn new_with_range(reader: TokioFileReader, range: &HttpRange) -> RangeBytesStream {
         Self {
             stream: FileBytesStream::new_with_limited(reader, range.length),
             start_pos: range.start,
@@ -117,11 +114,16 @@ impl MultiRangeBytesStream {
             ..
         } = *self;
         let mut is_first = true;
-        let total: u64 = ranges.as_slice().iter().map(|range| {
-            let header = Self::render_header(boundary, is_first, file_size, range, content_type);
-            is_first = false;
-            header.len() as u64 + range.length
-        }).sum();
+        let total: u64 = ranges
+            .as_slice()
+            .iter()
+            .map(|range| {
+                let header =
+                    Self::render_header(boundary, is_first, file_size, range, content_type);
+                is_first = false;
+                header.len() as u64 + range.length
+            })
+            .sum();
         let header_end = Self::render_header_end(boundary);
         total + header_end.len() as u64
     }

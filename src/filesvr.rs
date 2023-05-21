@@ -1,51 +1,37 @@
 use std::{
-    io::{
-        Error, 
-        Result, 
-        ErrorKind
-    },
-    pin::Pin, 
-    task::{Poll, Context},
+    io::{Error, ErrorKind, Result},
+    pin::Pin,
     result::Result as StdResult,
+    task::{Context, Poll},
 };
 
-use hyper::{
-    service::Service, 
-    Request, 
-    Response, 
-    StatusCode,
-};
+use hyper::{service::Service, Request, Response, StatusCode};
 
 use std::future::Future;
 
 use crate::{
-    request_resolve::{
-        RequestResolve, 
-        Resolved
-    }, 
-    resp_builder::ResponseBuilder, 
-    body::Body
+    body::Body,
+    request_resolve::{RequestResolve, Resolved},
+    resp_builder::ResponseBuilder,
 };
 
 #[derive(Clone)]
 pub struct FileService {
-    local_root: String
+    local_root: String,
 }
 
 impl FileService {
     pub fn new(root: impl Into<String>) -> Self {
         let local_root = root.into();
-        Self {
-            local_root
-        }
+        Self { local_root }
     }
 
     async fn serv<B>(self, request: Request<B>) -> Result<Response<Body>> {
         let resolved = RequestResolve::resolve(&self.local_root, &request).await?;
         let resp = match resolved {
             Resolved::IsDirectory => Response::builder()
-                    .status(StatusCode::FORBIDDEN)
-                    .body(Body::Empty),
+                .status(StatusCode::FORBIDDEN)
+                .body(Body::Empty),
             Resolved::MethodNotMatched => Response::builder()
                 .status(StatusCode::BAD_REQUEST)
                 .body(Body::Empty),
@@ -55,16 +41,14 @@ impl FileService {
             Resolved::PermissionDenied => Response::builder()
                 .status(StatusCode::FORBIDDEN)
                 .body(Body::Empty),
-            Resolved::Found(f) => {
-                ResponseBuilder::new().request(&request).build(f)
-            },
+            Resolved::Found(f) => ResponseBuilder::new().request(&request).build(f),
         };
         let resp = match resp {
             Ok(resp) => resp,
             Err(e) => {
                 let e = Error::new(ErrorKind::Other, e);
                 return Err(e);
-            },
+            }
         };
         Ok(resp)
     }
@@ -72,7 +56,7 @@ impl FileService {
 
 impl<B> Service<Request<B>> for FileService
 where
-    B: Sync + Send + 'static
+    B: Sync + Send + 'static,
 {
     type Response = Response<Body>;
 
@@ -91,15 +75,13 @@ where
 
 #[derive(Clone)]
 pub struct FileServiceMaker {
-    local_root: String
+    local_root: String,
 }
 
 impl FileServiceMaker {
     pub fn new(local_root: impl Into<String>) -> Self {
         let local_root = local_root.into();
-        Self {
-            local_root
-        }
+        Self { local_root }
     }
 }
 
@@ -108,7 +90,7 @@ impl<T> Service<T> for FileServiceMaker {
 
     type Error = hyper::Error;
 
-    type Future =  Pin<Box<dyn Future<Output = StdResult<Self::Response, Self::Error>> + Send>>;
+    type Future = Pin<Box<dyn Future<Output = StdResult<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, _: &mut Context<'_>) -> Poll<StdResult<(), Self::Error>> {
         Poll::Ready(Ok(()))

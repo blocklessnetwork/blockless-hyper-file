@@ -1,24 +1,24 @@
 use std::{
-    future::Future, 
-    path::{Path, PathBuf}, 
-    pin::Pin, 
-    io::{Result, Error, ErrorKind},
-    task::{Context, Poll}, 
-    mem::MaybeUninit, 
+    cmp::min,
+    fs::{OpenOptions, Permissions},
+    future::Future,
     io::SeekFrom,
-    cmp::min, 
-    fs::{OpenOptions, Permissions}, 
-    time::SystemTime
+    io::{Error, ErrorKind, Result},
+    mem::MaybeUninit,
+    path::{Path, PathBuf},
+    pin::Pin,
+    task::{Context, Poll},
+    time::SystemTime,
 };
 
 use hyper::body::Bytes;
 use tokio::{
-    io::{AsyncRead, ReadBuf, AsyncSeek}, 
-    fs::File, 
-    task::JoinHandle
+    fs::File,
+    io::{AsyncRead, AsyncSeek, ReadBuf},
+    task::JoinHandle,
 };
 
-const READ_BUF_SIZE: usize = 4*1024;
+const READ_BUF_SIZE: usize = 4 * 1024;
 
 /// file with the meta use for body stream.
 #[derive(Debug)]
@@ -60,9 +60,12 @@ impl TokioFileReader {
 }
 
 impl FileReader for TokioFileReader {
-
     /// read bytes from file to fill the http body.
-    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, readn: u64) -> Poll<Result<Bytes>> {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        readn: u64,
+    ) -> Poll<Result<Bytes>> {
         let Self {
             ref mut file,
             ref mut buf,
@@ -78,7 +81,7 @@ impl FileReader for TokioFileReader {
                     let bs = Bytes::copy_from_slice(bs);
                     Poll::Ready(Ok(bs))
                 }
-            },
+            }
             Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
             Poll::Pending => Poll::Pending,
         }
@@ -101,17 +104,15 @@ impl Into<TokioFileReader> for FileWithMeta {
     }
 }
 
-/// The future get the file and meta info 
+/// The future get the file and meta info
 pub struct FileWithMetaFuture {
-    inner: JoinHandle<Result<FileWithMeta>>
+    inner: JoinHandle<Result<FileWithMeta>>,
 }
 
 impl FileWithMetaFuture {
     fn new(path: PathBuf) -> Self {
         let inner = tokio::task::spawn_blocking(move || -> Result<FileWithMeta> {
-            let file = OpenOptions::new()
-                .read(true)
-                .open(path)?;
+            let file = OpenOptions::new().read(true).open(path)?;
             let meta = file.metadata()?;
             let file = tokio::fs::File::from_std(file);
             Ok(FileWithMeta {
@@ -137,8 +138,11 @@ impl Future for FileWithMetaFuture {
             Poll::Ready(Ok(r)) => Poll::Ready(r),
             Poll::Ready(Err(_)) => {
                 //only Joinhandle error.
-                Poll::Ready(Err(Error::new(ErrorKind::Other, "error execute in background.")))
-            },
+                Poll::Ready(Err(Error::new(
+                    ErrorKind::Other,
+                    "error execute in background.",
+                )))
+            }
             Poll::Pending => Poll::Pending,
         }
     }
@@ -150,12 +154,9 @@ pub struct TokioFileReaderOpener {
 
 impl TokioFileReaderOpener {
     pub fn new(root: impl Into<PathBuf>) -> Self {
-        Self {
-            root: root.into()
-        }
+        Self { root: root.into() }
     }
 }
-
 
 impl FileReaderOpener for TokioFileReaderOpener {
     type Output = FileWithMeta;
@@ -168,4 +169,3 @@ impl FileReaderOpener for TokioFileReaderOpener {
         FileWithMetaFuture::new(full_path)
     }
 }
-

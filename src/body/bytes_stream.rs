@@ -1,27 +1,30 @@
 use futures_util::Stream;
 use hyper::body::Bytes;
-use std::{io::Result, task::{Poll, Context}, pin::Pin};
+use std::{
+    io::Result,
+    pin::Pin,
+    task::{Context, Poll},
+};
 
-use crate::file::{TokioFileReader, FileReader};
-
+use crate::file::{FileReader, TokioFileReader};
 
 pub struct FileBytesStream<T = TokioFileReader> {
     pub reader: T,
     pub(crate) remaining: u64,
 }
 
-impl<T>  FileBytesStream<T>  {
+impl<T: FileReader> FileBytesStream<T> {
     pub fn new(reader: T) -> Self {
         Self {
             reader,
-            remaining: u64::MAX
+            remaining: u64::MAX,
         }
     }
 
     pub fn new_with_limited(reader: T, limited: u64) -> Self {
         Self {
             reader,
-            remaining: limited
+            remaining: limited,
         }
     }
 }
@@ -42,11 +45,9 @@ impl<T: FileReader> Stream for FileBytesStream<T> {
                 } else {
                     Poll::Ready(Some(Ok(b)))
                 }
-            },
+            }
             Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e))),
             Poll::Pending => Poll::Pending,
         }
     }
 }
-
-

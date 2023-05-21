@@ -1,13 +1,10 @@
+use hyper::{Method, Request};
+use std::future::Future;
+use std::io::{ErrorKind, Result};
 use std::task::{Context, Poll};
 use std::{path::PathBuf, pin::Pin};
-use std::io::{Result, ErrorKind};
-use std::future::Future;
-use hyper::{Request, Method};
 
-use crate::file::{
-    TokioFileReaderOpener, 
-    FileReaderOpener, FileWithMeta, FileWithMetaFuture
-};
+use crate::file::{FileReaderOpener, FileWithMeta, FileWithMetaFuture, TokioFileReaderOpener};
 #[derive(Debug)]
 pub enum Resolved {
     NotFound,
@@ -37,7 +34,7 @@ impl RequestResolve {
         }
         let opener_future = opener.open(decode_percents(uri_path));
         let is_method_match = match *r.method() {
-            Method::GET| Method::HEAD => true,
+            Method::GET | Method::HEAD => true,
             _ => false,
         };
         RequestResolve {
@@ -60,15 +57,15 @@ impl Future for RequestResolve {
         }
         let file_with_meta = match Pin::new(opener_future).poll(cx) {
             Poll::Ready(Ok(r)) => r,
-            Poll::Ready(Err(e)) =>  {
+            Poll::Ready(Err(e)) => {
                 let rs = match e.kind() {
                     ErrorKind::NotFound => Ok(Resolved::NotFound),
                     ErrorKind::PermissionDenied => Ok(Resolved::PermissionDenied),
                     e @ _ => Err(e.into()),
                 };
-                
+
                 return Poll::Ready(rs);
-            },
+            }
             Poll::Pending => return Poll::Pending,
         };
         if file_with_meta.is_dir {
