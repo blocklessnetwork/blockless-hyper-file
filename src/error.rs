@@ -4,10 +4,6 @@ use std::fmt::{
     self
 };
 
-pub enum Error {
-    
-}
-
 #[derive(Debug)]
 pub enum ParseError {
     // the invalid range

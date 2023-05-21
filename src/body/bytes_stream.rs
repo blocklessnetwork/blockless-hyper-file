@@ -1,6 +1,6 @@
 use futures_util::Stream;
 use hyper::body::Bytes;
-use std::{io::Result, task::Poll, pin::Pin};
+use std::{io::Result, task::{Poll, Context}, pin::Pin};
 
 use crate::file::{TokioFileReader, FileReader};
 
@@ -29,7 +29,7 @@ impl<T>  FileBytesStream<T>  {
 impl<T: FileReader> Stream for FileBytesStream<T> {
     type Item = Result<Bytes>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let Self {
             ref mut reader,
             ref mut remaining,

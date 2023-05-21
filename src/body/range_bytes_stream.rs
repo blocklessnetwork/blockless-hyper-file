@@ -175,7 +175,7 @@ impl Stream for MultiRangeBytesStream {
         if *completed {
             return Poll::Ready(None);
         }
-        if !range_stream.stream.remaining == 0 {
+        if range_stream.stream.remaining == 0 {
             let range = match ranges.next() {
                 Some(range) => range,
                 None => {

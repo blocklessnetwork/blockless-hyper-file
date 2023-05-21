@@ -22,7 +22,8 @@ use crate::{
 };
 
 const VALID_MTIME: Duration = Duration::from_secs(2);
-const BOUNDARY: &str = "boundary:blockless;boundary;0123456789;abcdefghghijkmlno";
+const BOUNDARY_LEN: u64 = 35;
+const BOUNDARY_CHRS: &[u8] = b"0123456789abcdefghghijkmlnopqrstuvwxyzABCDEFGHGHIJKMLNOPQRSTUVWXYZ";
 
 #[derive(Default, Debug, Clone)]
 pub struct ResponseBuilder {
@@ -32,7 +33,6 @@ pub struct ResponseBuilder {
     if_modified_since: Option<SystemTime>,
     // `If-Range` request header.
     if_range: Option<String>,
-
     is_head_method: bool,
 }
 
@@ -40,6 +40,19 @@ impl ResponseBuilder {
 
     pub fn new() -> Self {
         Default::default()
+    }
+
+    fn random_boundary() -> String {
+        let duration = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH);
+        let mut rnd = duration.map(|d| d.as_secs()).unwrap();
+        let mut boundary_buf = vec![0u8; (BOUNDARY_LEN + 10) as _];
+        for iter in boundary_buf.iter_mut().skip(10) {
+            let idx = (rnd % BOUNDARY_LEN) as usize;
+            *iter = BOUNDARY_CHRS[idx];
+            rnd += 1;
+        }
+        (&mut boundary_buf[0..10]).copy_from_slice(b"blockless:");
+        String::from_utf8(boundary_buf).unwrap()
     }
 
     pub fn range_header(&mut self, value: Option<&header::HeaderValue>) -> &mut Self {
@@ -137,8 +150,9 @@ impl ResponseBuilder {
                     .status(StatusCode::PARTIAL_CONTENT)
                     .body(Body::RangeBytesStream(stream));
             } else if ranges_len > 1 {
-                let stream = MultiRangeBytesStream::new(file.into(), ranges, BOUNDARY.into(), file_size);
-                let content_type = format!("multipart/byteranges; boundary={}", BOUNDARY);
+                let boundary = Self::random_boundary();
+                let content_type = format!("multipart/byteranges; boundary={}", &boundary);
+                let stream = MultiRangeBytesStream::new(file.into(), ranges, boundary, file_size);
                 resp_builder = resp_builder
                     .header(header::CONTENT_TYPE, content_type)
                     .header(header::CONTENT_LENGTH, stream.compute_body_len());

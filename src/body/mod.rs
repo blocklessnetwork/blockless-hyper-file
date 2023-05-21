@@ -39,7 +39,7 @@ impl hyper::body::HttpBody for Body {
 
     fn poll_trailers(
         self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
+        _cx: &mut Context<'_>,
     ) -> Poll<Result<Option<hyper::HeaderMap>, Self::Error>> {
         Poll::Ready(Ok(None))
     }

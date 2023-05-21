@@ -13,7 +13,7 @@ use hyper::{
     service::Service, 
     Request, 
     Response, 
-    StatusCode, http::request,
+    StatusCode,
 };
 
 use std::future::Future;
