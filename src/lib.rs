@@ -1,9 +1,9 @@
-mod filesvr;
-mod error;
 mod body;
+mod error;
 mod file;
+mod filesvr;
 mod range;
-mod resp_builder;
 mod request_resolve;
+mod resp_builder;
 
 pub use filesvr::FileServiceMaker;

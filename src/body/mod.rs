@@ -1,26 +1,25 @@
 use hyper::body::Bytes;
 
-use std::{
-    io::Error, 
-    task::{Poll, Context}, 
-    pin::Pin
-};
 use futures_util::Stream;
+use std::{
+    io::Error,
+    pin::Pin,
+    task::{Context, Poll},
+};
 
-pub use range_bytes_stream::MultiRangeBytesStream;
 pub use bytes_stream::FileBytesStream;
+pub use range_bytes_stream::MultiRangeBytesStream;
 pub use range_bytes_stream::RangeBytesStream;
 
 mod bytes_stream;
-mod range_bytes_stream;
 mod chunked_bytes_stream;
-
+mod range_bytes_stream;
 
 pub enum Body {
     Empty,
     Full(FileBytesStream),
     RangeBytesStream(RangeBytesStream),
-    MultiRangeBytesStream(MultiRangeBytesStream)
+    MultiRangeBytesStream(MultiRangeBytesStream),
 }
 
 impl hyper::body::HttpBody for Body {

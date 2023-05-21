@@ -1,29 +1,17 @@
-use std::time::{
-    SystemTime, 
-    UNIX_EPOCH, 
-    Duration
-};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use hyper::{
-    header, 
-    HeaderMap, 
-    http::Result, 
-    Response, 
-    Request, Method, StatusCode
-};
 use httpdate;
+use hyper::{header, http::Result, HeaderMap, Method, Request, Response, StatusCode};
 
 use crate::{
-    body::{Body, RangeBytesStream, MultiRangeBytesStream, FileBytesStream}, 
-
-    file::FileWithMeta, 
-    
-    range::HttpRange
+    body::{Body, FileBytesStream, MultiRangeBytesStream, RangeBytesStream},
+    file::FileWithMeta,
+    range::HttpRange,
 };
 
 const VALID_MTIME: Duration = Duration::from_secs(2);
 const BOUNDARY_LEN: u64 = 35;
-const BOUNDARY_CHRS: &[u8] = b"0123456789abcdefghghijkmlnopqrstuvwxyzABCDEFGHGHIJKMLNOPQRSTUVWXYZ";
+const BOUNDARY_CHRS: &[u8] = b"abcdefghghijkmlnopqrstuvwxyz0123456789ABCDEFGHGHIJKMLNOPQRSTUVWXYZ";
 
 #[derive(Default, Debug, Clone)]
 pub struct ResponseBuilder {
@@ -37,7 +25,6 @@ pub struct ResponseBuilder {
 }
 
 impl ResponseBuilder {
-
     pub fn new() -> Self {
         Default::default()
     }
@@ -56,9 +43,7 @@ impl ResponseBuilder {
     }
 
     pub fn range_header(&mut self, value: Option<&header::HeaderValue>) -> &mut Self {
-        self.range = value
-            .and_then(|v| v.to_str().ok())
-            .map(String::from);
+        self.range = value.and_then(|v| v.to_str().ok()).map(String::from);
         self
     }
 
@@ -74,7 +59,7 @@ impl ResponseBuilder {
         self.if_range_header(headers.get(header::IF_RANGE));
         self
     }
-    
+
     fn if_modified_since_header(&mut self, value: Option<&header::HeaderValue>) -> &mut Self {
         self.if_modified_since = value
             .and_then(|v| v.to_str().ok())
@@ -83,18 +68,12 @@ impl ResponseBuilder {
     }
 
     fn if_range_header(&mut self, value: Option<&header::HeaderValue>) -> &mut Self {
-        self.if_range = value
-            .and_then(|v| v.to_str().ok())
-            .map(String::from);
+        self.if_range = value.and_then(|v| v.to_str().ok()).map(String::from);
         self
     }
 
     fn is_head_method(&mut self, method: &Method) -> &mut Self {
-        self.is_head_method = if method == Method::HEAD {
-            true
-        } else {
-            false
-        };
+        self.is_head_method = if method == Method::HEAD { true } else { false };
         self
     }
 
@@ -105,12 +84,12 @@ impl ResponseBuilder {
     pub fn build(&self, file: FileWithMeta) -> Result<Response<Body>> {
         let file_size = file.size;
         let mut resp_builder = Response::builder();
-        let modified = file.modified.filter(|m| 
+        let modified = file.modified.filter(|m| {
             m.duration_since(UNIX_EPOCH)
                 .ok()
                 .filter(|d| d >= &VALID_MTIME)
                 .is_some()
-        );
+        });
         if let Some(modified) = modified {
             if let Ok(unix_time) = modified.duration_since(UNIX_EPOCH) {
                 let ims_unix_time = self.if_modified_since.map(|t| t.duration_since(UNIX_EPOCH));
@@ -118,7 +97,7 @@ impl ResponseBuilder {
                     if unix_time.as_secs() <= ims_unix_time.as_secs() {
                         return resp_builder
                             .status(StatusCode::NOT_MODIFIED)
-                            .body(Body::Empty)
+                            .body(Body::Empty);
                     }
                 }
             }
@@ -134,9 +113,11 @@ impl ResponseBuilder {
         if let Some(ranges) = ranges {
             let ranges = match ranges {
                 Ok(r) => r,
-                Err(_) => return resp_builder
-                    .status(StatusCode::RANGE_NOT_SATISFIABLE)
-                    .body(Body::Empty),
+                Err(_) => {
+                    return resp_builder
+                        .status(StatusCode::RANGE_NOT_SATISFIABLE)
+                        .body(Body::Empty)
+                }
             };
             let ranges_len = ranges.len();
             if ranges_len == 1 {
@@ -159,13 +140,10 @@ impl ResponseBuilder {
                 return resp_builder
                     .status(StatusCode::PARTIAL_CONTENT)
                     .body(Body::MultiRangeBytesStream(stream));
-            }   
+            }
         }
-        resp_builder = resp_builder
-            .header(header::CONTENT_LENGTH, file_size);
+        resp_builder = resp_builder.header(header::CONTENT_LENGTH, file_size);
         let stream = FileBytesStream::new_with_limited(file.into(), file_size);
-        return resp_builder
-            .status(StatusCode::OK)
-            .body(Body::Full(stream));
+        return resp_builder.status(StatusCode::OK).body(Body::Full(stream));
     }
 }
