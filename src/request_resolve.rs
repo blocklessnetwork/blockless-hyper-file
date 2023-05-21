@@ -22,10 +22,20 @@ pub(crate) struct RequestResolve {
     is_method_match: bool,
 }
 
+fn decode_percents(string: &str) -> String {
+    percent_encoding::percent_decode_str(string)
+        .decode_utf8_lossy()
+        .into_owned()
+}
+
 impl RequestResolve {
     pub fn resolve<B>(path: impl Into<PathBuf>, r: &Request<B>) -> Self {
         let opener = TokioFileReaderOpener::new(path);
-        let opener_future = opener.open(r.uri().path());
+        let mut uri_path = r.uri().path();
+        if uri_path.starts_with("/") {
+            uri_path = &uri_path[1..];
+        }
+        let opener_future = opener.open(decode_percents(uri_path));
         let is_method_match = match *r.method() {
             Method::GET| Method::HEAD => true,
             _ => false,

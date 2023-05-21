@@ -13,6 +13,7 @@ repository = "https://github.com/blocklessnetwork/hyper-file"
 futures-util = "0.3.28"
 httpdate = "1.0.2"
 hyper = "0.14.26"
+percent-encoding = "2.2.0"
 tokio = { version = "1.28.1", features = ["fs", "rt"] }
 
 [dev-dependencies]

@@ -13,7 +13,7 @@ use hyper::{
     service::Service, 
     Request, 
     Response, 
-    StatusCode,
+    StatusCode, http::request,
 };
 
 use std::future::Future;
@@ -39,59 +39,9 @@ impl FileService {
             local_root
         }
     }
-}
 
-impl<B> Service<Request<B>> for FileService
-where
-    B: Sync + Send + 'static
-{
-    type Response = Response<Body>;
-
-    type Error = Error;
-
-    type Future = FileServiceFuture;
-
-    fn call(&mut self, request: Request<B>) -> Self::Future {
-        FileServiceFuture::new(&self.local_root, request)
-    }
-
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<()>> {
-        Poll::Ready(Ok(()))
-    }
-}
-
-pub struct FileServiceFuture {
-    req_resolve: RequestResolve,
-    resp_builder: ResponseBuilder,
-}
-
-impl FileServiceFuture {
-    fn new<B>(local_root: &str, request: Request<B>) -> Self {
-        let req_resolve = RequestResolve::resolve(local_root, &request);
-        let mut resp_builder = ResponseBuilder::new();
-        resp_builder.request(&request);
-        Self {
-            req_resolve,
-            resp_builder,
-        }
-    }
-}
-
-impl Future for FileServiceFuture {
-    type Output = Result<Response<Body>>;
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let Self {
-            ref mut req_resolve,
-            ref resp_builder,
-        } = *self;
-        let resolved = match Pin::new(req_resolve).poll(cx) {
-            Poll::Ready(Ok(r)) => r,
-            Poll::Ready(Err(e)) => {
-                return Poll::Ready(Err(e))
-            },
-            Poll::Pending => return Poll::Pending,
-        };
+    async fn serv<B>(self, request: Request<B>) -> Result<Response<Body>> {
+        let resolved = RequestResolve::resolve(&self.local_root, &request).await?;
         let resp = match resolved {
             Resolved::IsDirectory => Response::builder()
                     .status(StatusCode::FORBIDDEN)
@@ -106,17 +56,36 @@ impl Future for FileServiceFuture {
                 .status(StatusCode::FORBIDDEN)
                 .body(Body::Empty),
             Resolved::Found(f) => {
-                resp_builder.build(f)
+                ResponseBuilder::new().request(&request).build(f)
             },
         };
         let resp = match resp {
             Ok(resp) => resp,
             Err(e) => {
                 let e = Error::new(ErrorKind::Other, e);
-                return Poll::Ready(Err(e));
+                return Err(e);
             },
         };
-        Poll::Ready(Ok(resp))
+        Ok(resp)
+    }
+}
+
+impl<B> Service<Request<B>> for FileService
+where
+    B: Sync + Send + 'static
+{
+    type Response = Response<Body>;
+
+    type Error = Error;
+
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response>> + Send>>;
+
+    fn call(&mut self, request: Request<B>) -> Self::Future {
+        Box::pin(self.clone().serv(request))
+    }
+
+    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<()>> {
+        Poll::Ready(Ok(()))
     }
 }
 
