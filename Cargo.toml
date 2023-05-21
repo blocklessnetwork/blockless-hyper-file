@@ -1,11 +1,11 @@
 [package]
-name = "hyper-file"
+name = "blockless-hyper-file"
 version = "0.1.0"
 edition = "2021"
 authors = ["Join.Gong<joinhack@gmail.com>", "Derek Anderson<derek@txlabs.org>"]
 description = "This hyper static file crate."
 license = "MIT/Apache-2.0"
-repository = "https://github.com/blocklessnetwork/hyper-file"
+repository = "https://github.com/blocklessnetwork/blockless-hyper-file"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

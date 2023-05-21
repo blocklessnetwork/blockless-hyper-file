@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use hyper_file::FileServiceMaker;
+use blockless_hyper_file::FileServiceMaker;
 use tokio::runtime::Builder;
 use hyper::Server;
 
@@ -12,7 +12,7 @@ fn main() {
     let addr: SocketAddr = ([127, 0, 0, 1], 9088).into();
     rt.block_on(async move {
         let builder = Server::bind(&addr);
-        let server = builder.serve(FileServiceMaker::new("/Users/join/Downloads/hyper-file/"));
+        let server = builder.serve(FileServiceMaker::new("."));
         server.await.unwrap();
     });
 }
