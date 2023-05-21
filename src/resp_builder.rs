@@ -72,7 +72,7 @@ impl ResponseBuilder {
     }
 
     fn is_head_method(&mut self, method: &Method) -> &mut Self {
-        self.is_head_method = if method == Method::HEAD { true } else { false };
+        self.is_head_method = method == Method::HEAD;
         self
     }
 
