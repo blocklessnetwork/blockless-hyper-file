@@ -58,7 +58,7 @@ impl Future for RequestResolve {
                 let rs = match e.kind() {
                     ErrorKind::NotFound => Ok(Resolved::NotFound),
                     ErrorKind::PermissionDenied => Ok(Resolved::PermissionDenied),
-                    _ => Err(e.into()),
+                    _ => Err(e),
                 };
 
                 return Poll::Ready(rs);
