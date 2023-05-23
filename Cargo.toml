@@ -18,6 +18,7 @@ tokio = { version = "1.28.1", features = ["fs", "rt"] }
 
 [dev-dependencies]
 hyper = {version = "0.14.26", features = ["http1", "server", "tcp"]}
+tokio = { version = "1.28.1", features = ["fs", "rt", "rt-multi-thread"] }
 
 [lib]
 doctest = false
